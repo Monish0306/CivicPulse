@@ -236,14 +236,24 @@ export function LoginPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => toast("Redirecting to Google…")} className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:border-slate-300 hover:shadow-sm transition flex items-center justify-center gap-2">
-                  <GoogleGlyph /> Google
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const { signInWithRedirect } = await import("firebase/auth");
+                      const { auth, googleProvider } = await import("@/lib/firebase");
+                      await signInWithRedirect(auth, googleProvider);
+                    } catch (err: unknown) {
+                      const msg = err instanceof Error ? err.message : "Sign in failed";
+                      toast.error(msg.replace("Firebase: ", "").replace(/\(auth.*\)\.?/, ""));
+                    }
+                 }}
+                 className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:border-slate-300 hover:shadow-sm transition flex items-center justify-center gap-2"
+                >
+                 <GoogleGlyph /> Google
                 </button>
-                <button type="button" onClick={() => toast("Opening DigiLocker…")} className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:border-slate-300 hover:shadow-sm transition flex items-center justify-center gap-2">
-                  <span className="grid h-4 w-4 place-items-center rounded-sm bg-orange-500 text-[9px] font-black text-white">DL</span>
-                  DigiLocker
-                </button>
+                
               </div>
             </form>
 

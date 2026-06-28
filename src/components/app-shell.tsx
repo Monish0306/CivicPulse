@@ -49,13 +49,44 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 function Sidebar({ pathname }: { pathname: string }) {
+  const [user, setUser] = useState<{
+    displayName: string | null;
+    email: string | null;
+    photoURL: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    async function init() {
+      const { onAuthStateChanged } = await import("firebase/auth");
+      const { auth } = await import("@/lib/firebase");
+      unsub = onAuthStateChanged(auth, (u) => {
+        if (u) {
+          setUser({
+            displayName: u.displayName,
+            email:       u.email,
+            photoURL:    u.photoURL,
+          });
+        } else {
+          setUser(null);
+        }
+      });
+    }
+    init();
+    return () => unsub?.();
+  }, []);
+
+  const initials = user?.displayName
+    ? user.displayName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    : "?";
+
   return (
     <aside className="hidden md:flex fixed inset-y-0 left-0 z-30 w-64 flex-col bg-white border-r border-slate-200/80">
       <div className="flex items-center gap-3 px-6 h-16 border-b border-slate-200/80">
-        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-linear-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-500/30">
+        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-500/30">
           <Building2 className="h-5 w-5 text-white" strokeWidth={2.5} />
         </div>
-        <span className="text-xl font-bold tracking-tight text-slate-900">CivicSnap</span>
+        <span className="text-xl font-bold tracking-tight text-slate-900">CivicPulse</span>
       </div>
 
       <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
@@ -102,28 +133,66 @@ function Sidebar({ pathname }: { pathname: string }) {
       </nav>
 
       <div className="border-t border-slate-200/80 p-4">
-        <Link to="/login" className="flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-50 transition-colors">
-          <div className="relative">
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-linear-to-br from-fuchsia-500 to-blue-600 text-white text-sm font-bold">
-              AS
+        {user ? (
+          <div className="flex items-center gap-3 rounded-2xl p-2">
+            <div className="relative">
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt={user.displayName || "User"}
+                  className="h-10 w-10 rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-fuchsia-500 to-blue-600 text-white text-sm font-bold">
+                  {initials}
+                </div>
+              )}
+              <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-white">
+                <span className="block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+              </span>
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-white">
-              <span className="block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
-            </span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold text-slate-900 truncate">Aarav Sharma</div>
-            <div className="flex items-center gap-1 text-[11px] text-slate-500">
-              <Star className="h-3 w-3 fill-amber-400 stroke-amber-400" />
-              <span>Verified Local · Indiranagar</span>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold text-slate-900 truncate">
+                {user.displayName || user.email?.split("@")[0] || "User"}
+              </div>
+              <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                <Star className="h-3 w-3 fill-amber-400 stroke-amber-400" />
+                <span className="truncate">{user.email || "Verified Local"}</span>
+              </div>
             </div>
+            <button
+              onClick={async () => {
+                const { signOut } = await import("firebase/auth");
+                const { auth } = await import("@/lib/firebase");
+                await signOut(auth);
+                setUser(null);
+                window.location.href = "/login";
+              }}
+              className="shrink-0 text-[11px] text-slate-400 hover:text-red-500 transition font-medium"
+              title="Sign out"
+            >
+              Out
+            </button>
           </div>
-        </Link>
+        ) : (
+          <Link
+            to="/login"
+            className="flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-50 transition-colors"
+          >
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-slate-300 to-slate-400 text-white text-sm font-bold">
+              ?
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold text-slate-900">Sign in</div>
+              <div className="text-[11px] text-slate-500">Click to sign in with Google</div>
+            </div>
+          </Link>
+        )}
       </div>
     </aside>
   );
 }
-
 function Header() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);

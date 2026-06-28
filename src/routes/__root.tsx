@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -124,9 +124,25 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    async function handleRedirect() {
+      try {
+        const { getRedirectResult } = await import("firebase/auth");
+        const { auth } = await import("@/lib/firebase");
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          // User signed in via redirect — navigate to home
+          window.location.href = "/";
+        }
+      } catch (err) {
+        console.error("Redirect result error:", err);
+      }
+    }
+    handleRedirect();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster position="bottom-center" richColors theme="light" />
     </QueryClientProvider>
