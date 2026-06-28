@@ -241,14 +241,27 @@ export function LoginPage() {
                   type="button"
                   onClick={async () => {
                     try {
-                      const { signInWithRedirect } = await import("firebase/auth");
-                      const { auth, googleProvider } = await import("@/lib/firebase");
-                      await signInWithRedirect(auth, googleProvider);
+                      const { GoogleAuthProvider, signInWithPopup } = await import("firebase/auth");
+                      const { auth } = await import("@/lib/firebase");
+                      const provider = new GoogleAuthProvider();
+                      provider.setCustomParameters({ prompt: "select_account" });
+                      const result = await signInWithPopup(auth, provider);
+                      if (result.user) {
+                        toast.success(`Welcome, ${result.user.displayName || "there"}!`);
+                        navigate({ to: "/" });
+                      }
                     } catch (err: unknown) {
-                      const msg = err instanceof Error ? err.message : "Sign in failed";
-                      toast.error(msg.replace("Firebase: ", "").replace(/\(auth.*\)\.?/, ""));
-                    }
-                 }}
+                      const code = (err as { code?: string }).code;
+                      if (code === "auth/popup-blocked") {
+                        toast.error("Popup blocked. Please allow popups for this site.");
+                      } else if (code === "auth/cancelled-popup-request") {
+                          // user closed popup, do nothing
+                      } else {
+                        const msg = err instanceof Error ? err.message : "Sign in failed";
+                        toast.error(msg.replace("Firebase: ", "").replace(/\(auth.*\)\.?/, ""));
+                      }
+                    }                 
+                  }}
                  className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:border-slate-300 hover:shadow-sm transition flex items-center justify-center gap-2"
                 >
                  <GoogleGlyph /> Google

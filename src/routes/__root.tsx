@@ -125,17 +125,27 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
+    // Handle redirect result (fallback for popup-blocked browsers)
     async function handleRedirect() {
       try {
-        const { getRedirectResult } = await import("firebase/auth");
+        const { getRedirectResult, onAuthStateChanged } = await import("firebase/auth");
         const { auth } = await import("@/lib/firebase");
+
+        // Check redirect result first
         const result = await getRedirectResult(auth);
         if (result?.user) {
-          // User signed in via redirect — navigate to home
           window.location.href = "/";
+          return;
         }
+
+        // Then watch auth state — redirect away from /login if signed in
+        onAuthStateChanged(auth, (user) => {
+          if (user && window.location.pathname === "/login") {
+            window.location.href = "/";
+          }
+        });
       } catch (err) {
-        console.error("Redirect result error:", err);
+        console.error("Auth error:", err);
       }
     }
     handleRedirect();

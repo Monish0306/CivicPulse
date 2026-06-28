@@ -71,11 +71,32 @@ export interface PostComment {
 }
 
 export async function createPost(data: Omit<Post, "postId">) {
+  // If imageUrl is base64, store it separately to avoid doc size limit
+  let imageUrl = data.imageUrl || "";
+  let imageDocId = "";
+
+  if (imageUrl.startsWith("data:")) {
+    // Store base64 image in separate collection
+    const imgRef = await addDoc(collection(db, "images"), {
+      data:      imageUrl,
+      createdAt: serverTimestamp(),
+    });
+    imageDocId = imgRef.id;
+    imageUrl   = `firestore:${imgRef.id}`; // reference marker
+  }
+
   const ref = await addDoc(collection(db, "posts"), {
     ...data,
+    imageUrl,
+    imageDocId,
     createdAt: serverTimestamp(),
   });
   return ref.id;
+}
+
+export async function getPostImage(imageDocId: string): Promise<string> {
+  const snap = await getDoc(doc(db, "images", imageDocId));
+  return snap.exists() ? (snap.data().data as string) : "";
 }
 
 export function subscribeToPosts(cb: (posts: Post[]) => void) {
